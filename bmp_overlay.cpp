@@ -60,16 +60,16 @@ void convert_rgb_to_yuv420(u8 *rgb_data, u8 *yuv_data, u32 width, u32 y_index, u
             g = rgb_data[((x + pixel_row) * 3) + 1];
             b = rgb_data[(x + pixel_row) * 3];
                         
-            yuv_data[y_index++] = ((66 * r + 129 * g + 25 * b + 128) >> 8);
-            yuv_data[u_index++] = ((-38 * r - 74 * g + 112 * b + 128) >> 8) + 128;
-            yuv_data[v_index++] = ((112 * r - 94 * g - 18 * b + 128) >> 8) + 128;
+            yuv_data[y_index++] = (66 * r + 129 * g + 25 * b) >> 8;
+            yuv_data[u_index++] = ((-38 * r - 74 * g + 112 * b) >> 8) + 128;
+            yuv_data[v_index++] = ((112 * r - 94 * g - 18 * b) >> 8) + 128;
 
 
             r = rgb_data[((x + 1 + pixel_row) * 3) + 2];
             g = rgb_data[((x + 1 + pixel_row) * 3) + 1];
             b = rgb_data[(x + 1 + pixel_row) * 3];
                 
-            yuv_data[y_index++] = ((66 * r + 129 * g + 25 * b + 128) >> 8);               
+            yuv_data[y_index++] = (66 * r + 129 * g + 25 * b) >> 8;               
         }
         
         pixel_row = (y - 2) * width;
@@ -80,7 +80,7 @@ void convert_rgb_to_yuv420(u8 *rgb_data, u8 *yuv_data, u32 width, u32 y_index, u
             g = rgb_data[((x + pixel_row) * 3) + 1];
             b = rgb_data[(x + pixel_row) * 3];
                         
-            yuv_data[y_index++] = ((66 * r + 129 * g + 25 * b + 128) >> 8);
+            yuv_data[y_index++] = (66 * r + 129 * g + 25 * b) >> 8;
         }
     }
 }
@@ -212,7 +212,7 @@ void convert_rgb_to_yuv420_ssse3(u8 *rgb_data, u8 *yuv_data, u32 width, u32 y_in
                 g = rgb_data[((x + pixel_row_1) * 3) + 1];
                 b = rgb_data[(x + pixel_row_1) * 3];
                         
-                yuv_data[y_index++] = ((66 * r + 129 * g + 25 * b) >> 8); 
+                yuv_data[y_index++] = (66 * r + 129 * g + 25 * b) >> 8; 
                 yuv_data[u_index++] = ((-38 * r - 74 * g + 112 * b) >> 8) + 128;
                 yuv_data[v_index++] = ((112 * r - 94 * g - 18 * b) >> 8) + 128;
 
@@ -221,7 +221,7 @@ void convert_rgb_to_yuv420_ssse3(u8 *rgb_data, u8 *yuv_data, u32 width, u32 y_in
                 g = rgb_data[((x + 1 + pixel_row_1) * 3) + 1];
                 b = rgb_data[(x + 1 + pixel_row_1) * 3];
                         
-                yuv_data[y_index++] = ((66 * r + 129 * g + 25 * b) >> 8);
+                yuv_data[y_index++] = (66 * r + 129 * g + 25 * b) >> 8;
             }
         
             for (x = simd_aligned_width; x < width; x++)
@@ -230,7 +230,7 @@ void convert_rgb_to_yuv420_ssse3(u8 *rgb_data, u8 *yuv_data, u32 width, u32 y_in
                 g = rgb_data[((x + pixel_row_2) * 3) + 1];
                 b = rgb_data[(x + pixel_row_2) * 3];
                         
-                yuv_data[y_index + x] = ((66 * r + 129 * g + 25 * b) >> 8);
+                yuv_data[y_index + x] = (66 * r + 129 * g + 25 * b) >> 8;
             }
         }
 
@@ -398,13 +398,17 @@ int main(int arg_count, char **args)
         }        
 
         u32 image_resolution = bmp_header.width * bmp_header.height;
-    
+
+        u32 y_index = 0;
+        u32 u_index = image_resolution;
+        u32 v_index = image_resolution + (image_resolution / 4);
+        
         u32 yuv_data_size = image_resolution + (image_resolution / 2);
         u8 *yuv_data = (u8 *)malloc(yuv_data_size);
 
-        create_threads(rgb_data, yuv_data, bmp_header.width, bmp_header.height);        
+        create_threads(rgb_data, yuv_data, bmp_header.width, bmp_header.height);
         free(rgb_data);
-                
+
         overlay_image_on_video(yuv_data, bmp_header.width, bmp_header.height, video_filename, video_frame_width, video_frame_height, output_filename);
         free(yuv_data);
     }
