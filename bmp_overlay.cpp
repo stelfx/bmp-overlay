@@ -1,6 +1,116 @@
-#include "bmp_overlay.h"
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+#include <thread>
+#include <vector>
+#include <immintrin.h>
 
 
+typedef uint8_t u8;
+typedef uint16_t u16;
+typedef uint32_t u32;
+typedef int16_t s16;
+typedef int32_t s32;
+typedef __m128i m128i
+
+
+#pragma pack(push, 1)
+struct bitmap_header
+{
+    u16 file_type; 
+    u32 file_size;
+    u16 reserved1;
+    u16 reserved2;
+    u32 bitmap_offset;
+    u32 size;
+    s32 width;
+    s32 height;
+    u16 planes;
+    u16 bits_per_pixel;
+    u32 compression;
+    u32 size_of_bitmap;
+    s32 horz_resolution;
+    s32 vert_resolution;
+    u32 colors_used;
+    u32 colors_important;
+};
+#pragma pack(pop)
+
+
+struct lane_v3
+{
+    m128i r;
+    m128i g;
+    m128i b;
+};
+
+
+static
+lane_v3 set1_epi16(s16 a, s16 b, s16 c)
+{
+    lane_v3 result;
+    result.r = _mm_set1_epi16(c);
+    result.g = _mm_set1_epi16(b);
+    result.b = _mm_set1_epi16(a);
+
+    return result;
+}
+
+
+static
+lane_v3 set_epi8_lo(u8 a, u8 b, u8 c, u8 d)
+{
+
+    lane_v3 result;
+    result.r = _mm_set_epi8(
+        0xff, 0xff, 0xff, 0xff,
+        0xff, 0xff, 0xff, 0xff,
+        0xff, d+2,  0xff, c+2,
+        0xff, b+2,  0xff, a+2);
+    result.g = _mm_set_epi8(
+        0xff, 0xff, 0xff, 0xff,
+        0xff, 0xff, 0xff, 0xff,
+        0xff, d+1,  0xff, c+1,
+        0xff, b+1,  0xff, a+1);
+    
+    result.b = _mm_set_epi8(
+        0xff, 0xff, 0xff, 0xff,
+        0xff, 0xff, 0xff, 0xff,
+        0xff, d,    0xff, c,
+        0xff, b,    0xff, a);
+    
+    return result;
+}
+
+
+static
+lane_v3 set_epi8_hi(u8 a, u8 b, u8 c, u8 d)
+{
+    lane_v3 result;
+    result.r = _mm_set_epi8(
+        0xff, d+2,  0xff, c+2,
+        0xff, b+2,  0xff, a+2,
+        0xff, 0xff, 0xff, 0xff,
+        0xff, 0xff, 0xff, 0xff);
+
+    result.g = _mm_set_epi8(
+        0xff, d+1,  0xff, c+1,
+        0xff, b+1,  0xff, a+1,
+        0xff, 0xff, 0xff, 0xff,
+        0xff, 0xff, 0xff, 0xff);
+    
+    result.b = _mm_set_epi8(
+        0xff, d,    0xff, c,
+        0xff, b,    0xff, a,
+        0xff, 0xff, 0xff, 0xff,
+        0xff, 0xff, 0xff, 0xff);
+
+    return result;
+}
+
+static 
 u8 *read_bitmap_data(char *filename, bitmap_header *bmp_header)
 {
     FILE *fin;
@@ -40,6 +150,7 @@ u8 *read_bitmap_data(char *filename, bitmap_header *bmp_header)
 }
 
 
+static
 void convert_rgb_to_yuv420(u8 *rgb_data, u8 *yuv_data, u32 width, u32 y_index, u32 u_index, u32 v_index,
                           u32 start_row, u32 end_row)
 {
@@ -86,6 +197,7 @@ void convert_rgb_to_yuv420(u8 *rgb_data, u8 *yuv_data, u32 width, u32 y_index, u
 }
 
 
+static
 void convert_rgb_to_yuv420_ssse3(u8 *rgb_data, u8 *yuv_data, u32 width, u32 y_index, u32 u_index, u32 v_index,
                                 u32 start_row, u32 end_row)
 {
@@ -240,6 +352,7 @@ void convert_rgb_to_yuv420_ssse3(u8 *rgb_data, u8 *yuv_data, u32 width, u32 y_in
 }
 
 
+static
 void create_threads(u8 *rgb_data, u8 *yuv_data, u32 width, u32 height)
 {
     u32 image_resolution = width * height;
@@ -275,6 +388,7 @@ void create_threads(u8 *rgb_data, u8 *yuv_data, u32 width, u32 height)
 }
 
 
+static
 void overlay_image_on_video(u8 *image_data, u32 image_width, u32 image_height, char *video_filename,
                             u32 video_frame_width, u32 video_frame_height, char *output_filename)
 {
@@ -398,10 +512,6 @@ int main(int arg_count, char **args)
         }        
 
         u32 image_resolution = bmp_header.width * bmp_header.height;
-
-        u32 y_index = 0;
-        u32 u_index = image_resolution;
-        u32 v_index = image_resolution + (image_resolution / 4);
         
         u32 yuv_data_size = image_resolution + (image_resolution / 2);
         u8 *yuv_data = (u8 *)malloc(yuv_data_size);
