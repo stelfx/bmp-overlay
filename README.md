@@ -1,5 +1,5 @@
 # BMP Overlay
-A simple program that converts the BMP image to the YUV420 image and overlays it on top of each frame of the YUV420 video.
+A simple program that converts a BMP image to a YUV420 image and overlays it on top of each frame of the YUV420 video.
 
 Notes:
 1) It is assumed that the BMP file contains uncompressed RGB data without a palette or alpha channel.
