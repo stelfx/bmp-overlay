@@ -6,4 +6,5 @@ Notes:
 2) The image width and height should be multiples of 2 and should not exceed the width and height of a video frame.
 
 Usage:
-bmp_overlay [image file name] [video file name] [output file name] [video frame width] [video frame height]
+
+    bmp_overlay [image file name] [video file name] [output file name] [video frame width] [video frame height]
